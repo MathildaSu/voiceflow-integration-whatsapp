@@ -75,52 +75,18 @@ app.post('/webhook', async (req, res) => {
       } else if (req.body?.entry[0]?.changes[0]?.value?.messages[0]?.audio) {
         if (
           req.body?.entry[0]?.changes[0]?.value?.messages[0]?.audio?.voice ==
-            true &&
-          PICOVOICE_API_KEY
+            true 
         ) {
-          let mediaURL = await axios({
-            method: 'GET',
-            url: `https://graph.facebook.com/${WHATSAPP_VERSION}/${req.body.entry[0].changes[0].value.messages[0].audio.id}`,
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: 'Bearer ' + WHATSAPP_TOKEN,
+          const confirmation = '***audio received***';
+          await interact(
+            user_id,
+            {
+              type: 'text',
+              payload: confirmation.concat(req.body.entry[0].changes[0].value.messages[0].audio.id),
             },
-          })
-
-          const rndFileName =
-            'audio_' + Math.random().toString(36).substring(7) + '.ogg'
-
-          axios({
-            method: 'get',
-            url: mediaURL.data.url,
-            headers: {
-              Authorization: 'Bearer ' + WHATSAPP_TOKEN,
-            },
-            responseType: 'stream',
-          }).then(function (response) {
-            let engineInstance = new Leopard(PICOVOICE_API_KEY)
-            const wstream = fs.createWriteStream(rndFileName)
-            response.data.pipe(wstream)
-            wstream.on('finish', async () => {
-              console.log('Analysing Audio file')
-              const { transcript, words } =
-                engineInstance.processFile(rndFileName)
-              engineInstance.release()
-              fs.unlinkSync(rndFileName)
-              if (transcript && transcript != '') {
-                console.log('User audio:', transcript)
-                await interact(
-                  user_id,
-                  {
-                    type: 'text',
-                    payload: transcript,
-                  },
-                  phone_number_id,
-                  user_name
-                )
-              }
-            })
-          })
+            phone_number_id,
+            user_name
+          )
         }
       } else {
         if (
